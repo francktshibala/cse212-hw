@@ -20,10 +20,37 @@ public static class SetsAndMaps
     /// </summary>
     /// <param name="words">An array of 2-character words (lowercase, no duplicates)</param>
     public static string[] FindPairs(string[] words)
+{
+    // Create a set to store all words for quick lookup
+    var wordSet = new HashSet<string>(words);
+    var pairs = new List<string>();
+    var used = new HashSet<string>();
+
+    // Check each word
+    foreach (var word in words)
     {
-        // TODO Problem 1 - ADD YOUR CODE HERE
-        return [];
+        // Skip if we already used this word in a pair
+        if (used.Contains(word))
+            continue;
+
+        // Skip words with same letters (like "aa")
+        if (word[0] == word[1])
+            continue;
+
+        // Create the reverse of the word
+        string reverse = "" + word[1] + word[0];
+
+        // If the reverse exists and we haven't used it yet
+        if (wordSet.Contains(reverse) && !used.Contains(reverse))
+        {
+            pairs.Add($"{word} & {reverse}");
+            used.Add(word);
+            used.Add(reverse);
+        }
     }
+
+    return pairs.ToArray();
+}
 
     /// <summary>
     /// Read a census file and summarize the degrees (education)
@@ -36,17 +63,34 @@ public static class SetsAndMaps
     /// </summary>
     /// <param name="filename">The name of the file to read</param>
     /// <returns>fixed array of divisors</returns>
+    
     public static Dictionary<string, int> SummarizeDegrees(string filename)
+{
+    var degrees = new Dictionary<string, int>();
+    foreach (var line in File.ReadLines(filename))
     {
-        var degrees = new Dictionary<string, int>();
-        foreach (var line in File.ReadLines(filename))
+        var fields = line.Split(",");
+        
+        // Get the degree from column 4 (index 3 since we start counting at 0)
+        if (fields.Length > 3)
         {
-            var fields = line.Split(",");
-            // TODO Problem 2 - ADD YOUR CODE HERE
+            string degree = fields[3].Trim(); // Remove any extra spaces
+            
+            // If this degree is already in our dictionary, add 1 to its count
+            if (degrees.ContainsKey(degree))
+            {
+                degrees[degree]++;
+            }
+            else
+            {
+                // If it's a new degree, start counting at 1
+                degrees[degree] = 1;
+            }
         }
-
-        return degrees;
     }
+
+    return degrees;
+}
 
     /// <summary>
     /// Determine if 'word1' and 'word2' are anagrams.  An anagram
@@ -65,11 +109,47 @@ public static class SetsAndMaps
     /// using the [] notation.
     /// </summary>
     public static bool IsAnagram(string word1, string word2)
-    {
-        // TODO Problem 3 - ADD YOUR CODE HERE
+{
+    // Remove spaces and make everything lowercase
+    word1 = word1.Replace(" ", "").ToLower();
+    word2 = word2.Replace(" ", "").ToLower();
+    
+    // If different lengths, they can't be anagrams
+    if (word1.Length != word2.Length)
         return false;
+    
+    // Count letters in first word
+    var letterCount = new Dictionary<char, int>();
+    
+    foreach (char letter in word1)
+    {
+        if (letterCount.ContainsKey(letter))
+            letterCount[letter]++;
+        else
+            letterCount[letter] = 1;
     }
-
+    
+    // Subtract letters from second word
+    foreach (char letter in word2)
+    {
+        if (!letterCount.ContainsKey(letter))
+            return false; // Letter not in first word
+            
+        letterCount[letter]--;
+        
+        if (letterCount[letter] < 0)
+            return false; // Too many of this letter
+    }
+    
+    // Check if all counts are zero
+    foreach (var count in letterCount.Values)
+    {
+        if (count != 0)
+            return false;
+    }
+    
+    return true;
+}
     /// <summary>
     /// This function will read JSON (Javascript Object Notation) data from the 
     /// United States Geological Service (USGS) consisting of earthquake data.
@@ -87,20 +167,31 @@ public static class SetsAndMaps
     public static string[] EarthquakeDailySummary()
     {
         const string uri = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
-        using var client = new HttpClient();
-        using var getRequestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
-        using var jsonStream = client.Send(getRequestMessage).Content.ReadAsStream();
-        using var reader = new StreamReader(jsonStream);
-        var json = reader.ReadToEnd();
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    using var client = new HttpClient();
+    using var getRequestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+    using var jsonStream = client.Send(getRequestMessage).Content.ReadAsStream();
+    using var reader = new StreamReader(jsonStream);
+    var json = reader.ReadToEnd();
+    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(json, options);
+    var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(json, options);
 
-        // TODO Problem 5:
-        // 1. Add code in FeatureCollection.cs to describe the JSON using classes and properties 
-        // on those classes so that the call to Deserialize above works properly.
-        // 2. Add code below to create a string out each place a earthquake has happened today and its magitude.
-        // 3. Return an array of these string descriptions.
-        return [];
+    // Create a list to store our formatted earthquake strings
+    var earthquakeList = new List<string>();
+    
+    // Go through each earthquake
+    foreach (var feature in featureCollection.Features)
+    {
+        // Get the place and magnitude
+        string place = feature.Properties.Place;
+        double magnitude = feature.Properties.Mag;
+        
+        // Create the formatted string
+        string earthquakeInfo = $"{place} - Mag {magnitude}";
+        earthquakeList.Add(earthquakeInfo);
+    }
+    
+    return earthquakeList.ToArray();
+        
     }
 }
